@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
 
 interface Post {
   id: number
@@ -15,6 +14,7 @@ interface PostsState {
   loading: boolean
   error: string | null
   lastFetch: number | null
+  searchQuery: string
 }
 
 export const usePostsStore = defineStore('posts', {
@@ -22,61 +22,78 @@ export const usePostsStore = defineStore('posts', {
     posts: [],
     loading: false,
     error: null,
-    lastFetch: null
+    lastFetch: null,
+    searchQuery: ''
   }),
 
   getters: {
-    getPosts: (state) => state.posts,
+    getPosts: (state): Post[] => {
+      if (!state.searchQuery) return state.posts
+
+      const searchLower = state.searchQuery.toLowerCase()
+      return state.posts.filter(post => {
+        return (
+          post.title.toLowerCase().includes(searchLower) ||
+          post.body.toLowerCase().includes(searchLower) ||
+          post.tags.some(tag => tag.toLowerCase().includes(searchLower))
+        )
+      })
+    },
     getPostById: (state) => (id: number) => state.posts.find(post => post.id === id)
   },
 
   actions: {
+    setSearchQuery(query: string) {
+      this.searchQuery = query
+    },
+
     async fetchPosts() {
-      // Check if cache is still valid (15 minutes)
-      const now = Date.now()
-      const cacheTime = 15 * 60 * 1000 // 15 minutes in milliseconds
-      
-      if (this.lastFetch && (now - this.lastFetch) < cacheTime) {
-        return
-      }
+      if (this.loading) return
 
       this.loading = true
       this.error = null
 
       try {
-        const response = await axios.get('https://dummyjson.com/posts')
-        this.posts = response.data.posts
-        this.lastFetch = now
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'An error occurred'
+        const response = await fetch('https://dummyjson.com/posts?limit=20')
+        const data = await response.json()
+        
+        if (!data.posts || !Array.isArray(data.posts)) {
+          throw new Error('Invalid response format')
+        }
+
+        this.posts = data.posts
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+        this.error = 'Failed to fetch posts. Please try again later.'
+        this.posts = []
       } finally {
         this.loading = false
       }
     },
 
     async fetchPostById(id: number) {
-      // Check if post exists in cache
-      const existingPost = this.getPostById(id)
-      if (existingPost) return existingPost
-
-      this.loading = true
-      this.error = null
+      if (!id) return null
 
       try {
-        const response = await axios.get(`https://dummyjson.com/posts/${id}`)
-        const post = response.data
-        
-        // Add to cache if not already present
-        if (!this.posts.some(p => p.id === post.id)) {
+        const response = await fetch(`https://dummyjson.com/posts/${id}`)
+        const post = await response.json()
+
+        if (!post || !post.id) {
+          throw new Error('Post not found')
+        }
+
+        // Update in cache if exists
+        const index = this.posts.findIndex(p => p.id === id)
+        if (index !== -1) {
+          this.posts[index] = post
+        } else {
           this.posts.push(post)
         }
-        
+
         return post
-      } catch (err) {
-        this.error = err instanceof Error ? err.message : 'An error occurred'
+      } catch (error) {
+        console.error('Error fetching post:', error)
         return null
-      } finally {
-        this.loading = false
       }
     }
   }
