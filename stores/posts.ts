@@ -39,6 +39,14 @@ export const usePostsStore = defineStore('posts', {
         )
       })
     },
+
+    isCacheValid: (state) => {
+      if (!state.lastFetch) return false
+      const now = Date.now()
+      const cacheTime = 15 * 60 * 1000 // 15 minutes in milliseconds
+      return (now - state.lastFetch) < cacheTime
+    },
+
     getPostById: (state) => (id: number) => state.posts.find(post => post.id === id)
   },
 
@@ -48,6 +56,11 @@ export const usePostsStore = defineStore('posts', {
     },
 
     async fetchPosts() {
+      // Return cached data if valid
+      if (this.isCacheValid && this.posts.length > 0) {
+        return
+      }
+
       if (this.loading) return
 
       this.loading = true
@@ -62,6 +75,7 @@ export const usePostsStore = defineStore('posts', {
         }
 
         this.posts = data.posts
+        this.lastFetch = Date.now()
       } catch (error) {
         console.error('Error fetching posts:', error)
         this.error = 'Failed to fetch posts. Please try again later.'
@@ -73,6 +87,12 @@ export const usePostsStore = defineStore('posts', {
 
     async fetchPostById(id: number) {
       if (!id) return null
+
+      // Check if post exists in cache and cache is valid
+      if (this.isCacheValid) {
+        const cachedPost = this.posts.find(p => p.id === id)
+        if (cachedPost) return cachedPost
+      }
 
       try {
         const response = await fetch(`https://dummyjson.com/posts/${id}`)
