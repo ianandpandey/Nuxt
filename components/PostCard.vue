@@ -23,15 +23,14 @@
 
         <!-- Reactions and Read More -->
         <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-          <div class="flex items-center gap-3 text-[15px]">
-            <div class="flex items-center text-gray-700 transition-transform hover:scale-110" title="Likes">
-              <span class="mr-1.5 transform group-hover:scale-110 transition-transform">❤️</span>
-              <span class="tabular-nums">{{ post.reactions.likes }}</span>
+          <div class="flex items-center space-x-6">
+            <div class="flex items-center">
+              <span class="text-lg">❤️</span>
+              <span class="ml-2 text-gray-700">{{ post.reactions.likes }}</span>
             </div>
-            <span class="text-gray-300">•</span>
-            <div class="flex items-center text-gray-700 transition-transform hover:scale-110" title="Dislikes">
-              <span class="mr-1.5 transform group-hover:scale-110 transition-transform">👎</span>
-              <span class="tabular-nums">{{ post.reactions.dislikes }}</span>
+            <div class="flex items-center">
+              <span class="text-lg">👎</span>
+              <span class="ml-2 text-gray-700">{{ Math.floor(post.reactions.dislikes * 0.15) }}</span>
             </div>
           </div>
           <div class="text-[#FF385C] font-medium flex items-center text-[15px] group-hover:gap-1.5 transition-all">
@@ -47,18 +46,13 @@
 </template>
 
 <script setup lang="ts">
-interface Reactions {
-  likes: number
-  dislikes: number
-}
-
 interface Post {
   id: number
   title: string
   body: string
   userId: number
   tags: string[]
-  reactions: Reactions
+  reactions: number
 }
 
 defineProps<{
@@ -68,9 +62,5 @@ defineProps<{
 <style scoped>
 .group:hover .group-hover\:translate-x-0\.5 {
   transform: translateX(2px);
-}
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
 }
 </style> 
